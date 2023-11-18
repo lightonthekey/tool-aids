@@ -1,4 +1,4 @@
-module tool-aids
+module github.com/lightonthekey/tool-aids
 
 go 1.18
 
