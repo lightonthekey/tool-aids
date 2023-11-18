@@ -7,14 +7,15 @@ package ipqqwry
 import (
 	"encoding/binary"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
-	"time"
+
+	"path/filepath"
 
 	"golang.org/x/text/encoding/simplifiedchinese"
 )
@@ -54,10 +55,10 @@ type Response struct {
 	w http.ResponseWriter
 }
 
+var path = "/data/ipqqwry.dat"
+
 // IPData IP库的数据
 var IPData fileData
-
-var path = "/data/ipqqwry.dat"
 
 // 查询的IP地址
 func FindAddressAll(ips []string) map[string]ResultQQwry {
@@ -79,19 +80,22 @@ func FindAddress(ip string) string {
 }
 
 func init() {
-	demo_path, _ := os.Getwd()
-	datFile := flag.String("qqwry", demo_path+path, "纯真 IP 库的地址")
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Fatal("Could not get current file information")
+	}
 
+	// 获取当前文件所在目录
+	demoPath := filepath.Dir(currentFile)
+	datFile := flag.String("qqwry", filepath.Join(demoPath, path), "纯真 IP 库的地址")
 	IPData.FilePath = *datFile
-
-	startTime := time.Now().UnixNano()
+	// startTime := time.Now().UnixNano()
 	res := IPData.initIPData()
-
 	if v, ok := res.(error); ok {
 		log.Println(v)
 	}
-	endTime := time.Now().UnixNano()
-	fmt.Printf("IP库加载完成，共:%d 条IP记录，所耗时间:%.1f ms\n", IPData.IPNum, float64(endTime-startTime)/1000000)
+	// endTime := time.Now().UnixNano()
+	// fmt.Printf("IP库加载完成，共:%d 条IP记录，所耗时间:%.1f ms\n", IPData.IPNum, float64(endTime-startTime)/1000000)
 }
 
 // initIPData 初始化ip库数据到内存中
@@ -124,7 +128,6 @@ func (f *fileData) initIPData() (rs interface{}) {
 	buf := f.Data[0:8]
 	start := binary.LittleEndian.Uint32(buf[:4])
 	end := binary.LittleEndian.Uint32(buf[4:])
-
 	f.IPNum = int64((end-start)/IndexLen + 1)
 
 	return true
@@ -137,7 +140,7 @@ func NewQQwry() QQwry {
 	}
 }
 
-//  从文件中读取数据
+// 从文件中读取数据
 func (q *QQwry) readData(num int, offset ...int64) (rs []byte) {
 	if len(offset) > 0 {
 		q.SetOffset(offset[0])
