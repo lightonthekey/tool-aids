@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"tool-aids/ipqqwry"
-	gojieba "tool-aids/jieba"
+
+	"github.com/lightonthekey/tool-aids/ipqqwry"
+	gojieba "github.com/lightonthekey/tool-aids/jieba"
 )
 
 func main() {
