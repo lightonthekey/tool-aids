@@ -4,8 +4,10 @@
 package jieba
 
 import (
-	"os"
+	"log"
+	"path/filepath"
 	"regexp"
+	"runtime"
 
 	"github.com/huichen/sego"
 )
@@ -16,8 +18,16 @@ type Jieba struct{}
 var goseg sego.Segmenter
 
 func startInit() {
-	dictionary, _ := os.Getwd()
-	goseg.LoadDictionary(dictionary + "/data/jieba_dictionary.txt")
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Fatal("Could not get current file information（jieba.go）")
+	}
+
+	// 获取当前文件所在目录
+	currentDir := filepath.Dir(currentFile)
+	// 构建文件路径
+	dictionaryPath := filepath.Join(currentDir, "data", "jieba_dictionary.txt")
+	goseg.LoadDictionary(dictionaryPath)
 }
 
 // 字符串

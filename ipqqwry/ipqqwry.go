@@ -82,7 +82,7 @@ func FindAddress(ip string) string {
 func init() {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
-		log.Fatal("Could not get current file information")
+		log.Fatal("Could not get current file information（ipqqwry.go）")
 	}
 
 	// 获取当前文件所在目录
