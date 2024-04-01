@@ -16,11 +16,11 @@ import (
 
 // LocationInfo 表示一个地理位置的信息。
 type LocationInfo struct {
-	Ip           string `json:"ip"`
-	CountryShort string `json:"Country_short"`
-	CountryLong  string `json:"Country_long"`
-	Region       string `json:"Region"`
-	City         string `json:"City"`
+	Ip           string
+	CountryShort string
+	CountryLong  string
+	Region       string
+	City         string
 }
 
 var ipv6db *ip2location.DB
