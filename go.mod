@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/huichen/sego v0.0.0-20210824061530-c87651ea5c76
+	github.com/ip2location/ip2location-go v8.3.0+incompatible
 	golang.org/x/text v0.4.0
 )
 
