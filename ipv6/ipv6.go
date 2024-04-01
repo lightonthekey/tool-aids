@@ -16,6 +16,7 @@ import (
 
 // LocationInfo 表示一个地理位置的信息。
 type LocationInfo struct {
+	Ip           string `json:"ip"`
 	CountryShort string `json:"Country_short"`
 	CountryLong  string `json:"Country_long"`
 	Region       string `json:"Region"`
@@ -51,6 +52,7 @@ func FindAddress(ipv6 string) (LocationInfo, error) {
 		CountryLong:  results.Country_long,
 		Region:       results.Region,
 		City:         results.City,
+		Ip:           ipv6,
 	}
 	return data, nil
 }
