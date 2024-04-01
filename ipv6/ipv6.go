@@ -7,7 +7,9 @@ package ipv6
 
 import (
 	"fmt"
-	"os"
+	"log"
+	"path/filepath"
+	"runtime"
 
 	"github.com/ip2location/ip2location-go"
 )
@@ -20,21 +22,28 @@ type LocationInfo struct {
 	City         string `json:"City"`
 }
 
-// FindAddress 接受一个 ipv6 地址作为输入，返回该地址对应的地理位置信息。
-// 因为它依赖于一个地理位置数据库，路径需要提前设置好。
-// 如果没有找到对应的地理位置信息，或者发生其他错误，它会返回一个空的 LocationInfo 和一个非nil的error.
-func FindAddress(ipv6 string) (LocationInfo, error) {
-	demo_path, _ := os.Getwd()
-	var data_path = demo_path + "/ipv6/data/IP2LOCATION-LITE-DB3.IPV6.BIN"
+var ipv6db *ip2location.DB
 
-	db, err := ip2location.OpenDB(data_path)
-	if err != nil {
-		return LocationInfo{}, fmt.Errorf("open DB failed: %v", err)
+func init() {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Fatal("Could not get current file information（jieba.go）")
 	}
 
-	results, err := db.Get_all(ipv6)
+	currentDir := filepath.Dir(currentFile)
+	dictPath := filepath.Join(currentDir, "data", "IP2LOCATION-LITE-DB3.IPV6.BIN")
+
+	var err error
+	ipv6db, err = ip2location.OpenDB(dictPath)
 	if err != nil {
-		return LocationInfo{}, fmt.Errorf("get all failed: %v", err)
+		log.Fatalf("Failed to open ipv6 db: %v", err)
+	}
+}
+
+func FindAddress(ipv6 string) (LocationInfo, error) {
+	results, err := ipv6db.Get_all(ipv6)
+	if err != nil {
+		return LocationInfo{}, fmt.Errorf("Failed to get location for %s: %v", ipv6, err)
 	}
 
 	data := LocationInfo{
