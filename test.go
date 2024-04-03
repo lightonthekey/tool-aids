@@ -22,7 +22,7 @@ func main() {
 	var jieba = gojieba.JiebaSego("田野上方覆盖着一层烟雾，迷迷蒙蒙的，仿佛一幅大肆渲染的水墨画。", true)
 	fmt.Println(jieba)
 
-	data6, _ := ipv6.FindAddress("40.184.130.88")
+	data6, _ := ipv6.FindAddress("40.184.139.215.177")
 	fmt.Println(data6)
 
 }
