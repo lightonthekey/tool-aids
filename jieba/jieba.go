@@ -15,9 +15,8 @@ import (
 // 存放分词器
 var segmenter sego.Segmenter
 
-// 字符串分词的函数，将被调用的频率非常高
-// 那么我们只在第一次调用这个函数的时候才加载字典文件，之后的调用将直接使用已加载的字典
-func init() {
+// 不用init()，是为了避免打印出这玩意：%载入sego词典% %sego词典载入完毕%
+func startInit() {
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		log.Fatal("Could not get current file information（jieba.go）")
@@ -33,6 +32,9 @@ func init() {
 // JiebaSegment 用给定的模式对参数字符串进行分词并返回分词结果
 // model 要使用的分词模式，普通模式=false, 搜索模式=true
 func JiebaSego(content string, model bool) string {
+	if segmenter == (sego.Segmenter{}) {
+		startInit()
+	}
 	segments := segmenter.Segment([]byte(content))
 
 	wordSlice := sego.SegmentsToSlice(segments, model)
@@ -47,6 +49,9 @@ func JiebaSego(content string, model bool) string {
 // model 要使用的分词模式，普通模式=false, 搜索模式=true
 // 增加词性
 func JiebaSegoPlusV(content string, model bool) string {
+	if segmenter == (sego.Segmenter{}) {
+		startInit()
+	}
 	segments := segmenter.Segment([]byte(content))
 	return sego.SegmentsToString(segments, model)
 }

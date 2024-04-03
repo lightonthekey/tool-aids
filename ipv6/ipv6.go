@@ -12,6 +12,7 @@ import (
 	"runtime"
 
 	"github.com/ip2location/ip2location-go"
+	"github.com/lightonthekey/tool-aids/ipv6/data"
 )
 
 // LocationInfo 表示一个地理位置的信息。
@@ -41,6 +42,7 @@ func init() {
 	}
 }
 
+// 查询地址，返回英语
 func FindAddress(ipv6 string) (LocationInfo, error) {
 	results, err := ipv6db.Get_all(ipv6)
 	if err != nil {
@@ -55,4 +57,39 @@ func FindAddress(ipv6 string) (LocationInfo, error) {
 		Ip:           ipv6,
 	}
 	return data, nil
+}
+
+// 查询地址，返回中文
+func FindAddressToChinese(ipv6 string) (LocationInfo, error) {
+	results, err := ipv6db.Get_all(ipv6)
+	if err != nil {
+		return LocationInfo{}, fmt.Errorf("Failed to get location for %s: %v", ipv6, err)
+	}
+
+	data := LocationInfo{
+		CountryShort: results.Country_short,
+		CountryLong:  results.Country_long,
+		Region:       results.Region,
+		City:         results.City,
+		Ip:           ipv6,
+	}
+	data = langTranslate(data)
+	return data, nil
+}
+
+// 语言翻译
+func langTranslate(info LocationInfo) LocationInfo {
+	var countryMap = data.CountryShortMap
+	var cityMap = data.CityyMap
+	var regionMap = data.RegionMap
+	if val, ok := cityMap[info.City]; ok {
+		info.City = val
+	}
+	if val, ok := countryMap[info.CountryShort]; ok {
+		info.CountryLong = val
+	}
+	if val, ok := regionMap[info.Region]; ok {
+		info.Region = val
+	}
+	return info
 }
