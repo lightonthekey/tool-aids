@@ -145,6 +145,9 @@ func (q *QQwry) readData(num int, offset ...int64) (rs []byte) {
 	if len(offset) > 0 {
 		q.SetOffset(offset[0])
 	}
+	if q.Data == nil || len(q.Data.Data) == 0 {
+		return nil
+	}
 	nums := int64(num)
 	end := q.Offset + nums
 	dataNum := int64(len(q.Data.Data))
@@ -169,6 +172,12 @@ func (q *QQwry) SetOffset(offset int64) {
 func (q *QQwry) Find(ip string) (res ResultQQwry) {
 
 	res = ResultQQwry{}
+
+	res.IP = ip
+	if net.ParseIP(ip) == nil {
+		res.Country = "未知"
+		return res
+	}
 
 	res.IP = ip
 	if strings.Count(ip, ".") != 3 {
@@ -300,6 +309,9 @@ func (q *QQwry) getMiddleOffset(start uint32, end uint32) uint32 {
 
 // byteToUInt32 将 byte 转换为uint32
 func byteToUInt32(data []byte) uint32 {
+	if len(data) < 3 {
+		return 0
+	}
 	i := uint32(data[0]) & 0xff
 	i |= (uint32(data[1]) << 8) & 0xff00
 	i |= (uint32(data[2]) << 16) & 0xff0000
