@@ -6,6 +6,7 @@ import (
 	"github.com/lightonthekey/tool-aids/ipqqwry"
 	"github.com/lightonthekey/tool-aids/ipv6"
 	gojieba "github.com/lightonthekey/tool-aids/jieba"
+	"github.com/lightonthekey/tool-aids/piqqwry"
 )
 
 func main() {
@@ -25,4 +26,6 @@ func main() {
 	data6, _ := ipv6.FindAddress("40.184.139.215.177")
 	fmt.Println(data6)
 
+	data7, _ := piqqwry.Query(10)
+	fmt.Println(data7)
 }

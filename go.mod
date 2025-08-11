@@ -1,6 +1,6 @@
 module github.com/lightonthekey/tool-aids
 
-go 1.18
+go 1.22
 
 require (
 	github.com/huichen/sego v0.0.0-20210824061530-c87651ea5c76
