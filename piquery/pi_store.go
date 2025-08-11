@@ -20,10 +20,10 @@ type PIStore struct {
 
 // Result 包含查询结果的结构体
 type Result struct {
-	Position       int
-	CurrentDigit   byte
-	PreviousDigits []byte
-	NextDigits     []byte
+	Position int
+	Current  string
+	Previous string
+	Next     string
 }
 
 // NewPIStore 初始化PIStore，加载嵌入式的圆周率数据
@@ -58,28 +58,29 @@ func (p *PIStore) Query(position int) (Result, error) {
 	index := position - 1
 
 	// 获取当前数字
-	current := p.digits[index]
+	current := string(p.digits[index])
 
-	// 获取前5位数字
+	// 获取前5位数字（转换为字符串）
 	startPrev := index - 5
 	if startPrev < 0 {
 		startPrev = 0
 	}
-	previous := p.digits[startPrev:index]
+	previous := string(p.digits[startPrev:index]) // 字节切片转字符串
 
-	// 获取后5位数字
-	endNext := index + 6 // 索引+1到+5共5个数字
+	// 获取后5位数字（转换为字符串）
+	endNext := index + 6
 	if endNext > p.maxPos {
 		endNext = p.maxPos
 	}
-	next := p.digits[index+1 : endNext]
+	next := string(p.digits[index+1 : endNext]) // 字节切片转字符串
 
 	return Result{
-		Position:       position,
-		CurrentDigit:   current,
-		PreviousDigits: previous,
-		NextDigits:     next,
+		Position: position,
+		Current:  current,  // 赋值字符串
+		Previous: previous, // 赋值字符串
+		Next:     next,     // 赋值字符串
 	}, nil
+
 }
 
 // MaxPosition 返回最大可查询的位置

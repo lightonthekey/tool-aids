@@ -31,8 +31,8 @@ func TestQueryValidPosition(t *testing.T) {
 		t.Errorf("Expected position 1, got %d", result.Position)
 	}
 
-	if result.CurrentDigit != '3' {
-		t.Errorf("Expected current digit '3', got %c", result.CurrentDigit)
+	if result.Current != "3" {
+		t.Errorf("Expected current digit '3', got %c", result.Current)
 	}
 
 	// 测试中间位置
@@ -76,8 +76,8 @@ func TestQueryEdgeCases(t *testing.T) {
 	if err != nil {
 		t.Errorf("Query for position 1 failed: %v", err)
 	}
-	if len(result.PreviousDigits) != 0 {
-		t.Errorf("Expected 0 previous digits for position 1, got %d", len(result.PreviousDigits))
+	if len(result.Previous) != 0 {
+		t.Errorf("Expected 0 previous digits for position 1, got %d", len(result.Previous))
 	}
 
 	// 测试最后一位（后5位不足）
@@ -85,7 +85,7 @@ func TestQueryEdgeCases(t *testing.T) {
 	if err != nil {
 		t.Errorf("Query for position %d failed: %v", maxPos, err)
 	}
-	if len(result.NextDigits) != 0 {
-		t.Errorf("Expected 0 next digits for last position, got %d", len(result.NextDigits))
+	if len(result.Next) != 0 {
+		t.Errorf("Expected 0 next digits for last position, got %d", len(result.Next))
 	}
 }
