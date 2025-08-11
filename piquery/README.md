@@ -11,8 +11,8 @@ piquery是一个Go语言开源库，用于高效查询圆周率的指定位数�
 - 完善的错误处理
 
 ## 安装go get github.com/yourusername/piquery
-## 使用示例package main
-
+## 使用示例 package main
+```
 import (
 	"fmt"
 	"log"
@@ -39,6 +39,7 @@ func main() {
 	fmt.Printf("前5位: %s\n", result.PreviousDigits)
 	fmt.Printf("后5位: %s\n", result.NextDigits)
 }
+```
 ## API文档
 
 ### PIStore

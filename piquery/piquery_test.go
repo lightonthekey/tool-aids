@@ -37,7 +37,7 @@ func TestQueryValidPosition(t *testing.T) {
 
 	// 测试中间位置
 	if store.MaxPosition() > 100 {
-		result, err := store.Query(100)
+		result, err = store.Query(100)
 		if err != nil {
 			t.Errorf("Query for position 100 failed: %v", err)
 		}
@@ -70,7 +70,7 @@ func TestQueryEdgeCases(t *testing.T) {
 	}
 
 	maxPos := store.MaxPosition()
-	
+
 	// 测试第一位（前5位不足）
 	result, err := store.Query(1)
 	if err != nil {

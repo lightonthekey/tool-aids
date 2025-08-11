@@ -26,7 +26,7 @@ func main() {
 	data6, _ := ipv6.FindAddress("40.184.139.215.177")
 	fmt.Println(data6)
 
-	data7, _ := pi.Query(10)
-	data8, _ := pi.Query(12)
-	fmt.Println(data7, data8)
+	data7, _ := pi.Query(2)
+	data8, _ := pi.Query(3)
+	fmt.Println("第2位=", data7, "第3位=", data8)
 }

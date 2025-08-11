@@ -3,6 +3,7 @@ package piquery
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"io/fs"
 )
 
@@ -50,7 +51,7 @@ func NewPIStore() (*PIStore, error) {
 func (p *PIStore) Query(position int) (Result, error) {
 	// 验证位置有效性（位置从1开始）
 	if position < 1 || position > p.maxPos {
-		return Result{}, errors.Newf("Invalid position, must be between 1 and %d", p.maxPos)
+		return Result{}, fmt.Errorf("Invalid position, must be between 1 and %d", p.maxPos)
 	}
 
 	// 转换为0基索引
