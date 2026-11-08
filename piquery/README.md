@@ -1,80 +1,59 @@
-# piquery - 高效的圆周率查询库
+# piquery - 圆周率位数查询
 
-piquery是一个Go语言开源库，用于高效查询圆周率的指定位数及其前后数字。该库采用预存数据的方式，支持查询1到100万位的圆周率数字，提供毫秒级的查询响应。
+查询圆周率指定位数的数字及前后各 5 位，数据内嵌在二进制中，毫秒级（实际是纳秒级）响应。
 
 ## 特点
 
-- 采用嵌入式数据文件，无需外部依赖
-- 支持查询1到100万位的圆周率数字
-- 每次查询返回指定位置的数字及其前后各5位数字
-- 简单易用的API接口
-- 完善的错误处理
+- 数据文件 `pi_digits.txt` 通过 `go:embed` 内嵌，无需外部依赖
+- 支持查询第 1 到 1000001 位（第 1 位是整数位 `3`）
+- 首次调用校验一次数据（约 0.7ms），之后查询是纯内存切片，约 40ns
+- `NewPIStore()` 返回共享只读实例，并发安全
 
-## 安装go get github.com/yourusername/piquery
-## 使用示例 package main
+## 使用
+
+```go
+import "github.com/lightonthekey/tool-aids/piquery"
+
+// 包级快捷方法
+r, err := piquery.Query(100)
+fmt.Printf("第%d位: %s，前5位: %s，后5位: %s\n", r.Position, r.Current, r.Previous, r.Next)
+fmt.Println("最大位置:", piquery.MaxPosition())
+
+// 或者自行持有一个 Store
+store, err := piquery.NewPIStore()
+r, err = store.Query(100)
 ```
-import (
-	"fmt"
-	"log"
-	"piquery"
-)
 
-func main() {
-	// 初始化PIStore
-	store, err := piquery.NewPIStore()
-	if err != nil {
-		log.Fatalf("初始化失败: %v", err)
-	}
+## API
 
-	fmt.Printf("支持查询的最大位数: %d\n", store.MaxPosition())
+### func Query(position int) (Result, error)
 
-	// 查询第100位
-	result, err := store.Query(100)
-	if err != nil {
-		log.Fatalf("查询失败: %v", err)
-	}
+从共享实例查询；`position` 从 1 开始，对应数据串下标 `position-1`。
+注意第 1 位是整数位 `3`，如需“小数点后第 N 位”请传 `N+1`。
 
-	// 输出结果
-	fmt.Printf("第%d位: %c\n", result.Position, result.CurrentDigit)
-	fmt.Printf("前5位: %s\n", result.PreviousDigits)
-	fmt.Printf("后5位: %s\n", result.NextDigits)
-}
-```
-## API文档
+### func NewPIStore() (*PIStore, error)
 
-### PIStore
+返回共享实例，首次调用会校验 100 万个字节，之后为 O(1)。返回值只读，可并发使用。
 
-`PIStore`是圆周率查询的核心结构体，用于存储圆周率数据并提供查询功能。
+### func MaxPosition() int / (*PIStore).MaxPosition() int
 
-#### NewPIStore() (*PIStore, error)
+最大可查询位置（当前数据为 1000001）。
 
-创建一个新的PIStore实例，自动加载嵌入式的圆周率数据。
+### type Result
 
-#### Query(position int) (Result, error)
+| 字段 | 说明 |
+| --- | --- |
+| `Position` | 查询的位置 |
+| `Current` | 该位置的数字（字符串） |
+| `Previous` | 前 5 位（不足则为空串） |
+| `Next` | 后 5 位（不足则为空串） |
 
-查询指定位置的圆周率数字。`position`是要查询的位置，从1开始。返回一个`Result`结构体和可能的错误。
+## 更新数据
 
-#### MaxPosition() int
-
-返回最大可查询的位置（即预存的圆周率总位数）。
-
-### Result
-
-`Result`结构体包含查询结果：
-
-- `Position`: 查询的位置
-- `CurrentDigit`: 当前位置的数字（byte类型，可直接转换为字符）
-- `PreviousDigits`: 前5位数字（如果不足5位则返回实际可获取的数量）
-- `NextDigits`: 后5位数字（如果不足5位则返回实际可获取的数量）
-
-## 数据文件补充
-
-该库包含一个`pi_digits.txt`文件，目前包含圆周率的前若干位数字。作为创作者，你可以通过以下步骤补充完整至100万位：
-
-1. 从可靠来源获取圆周率前100万位数字（纯数字，不含小数点）
-2. 替换`piquery/pi_digits.txt`文件内容
+1. 从可靠来源获取圆周率前 100 万位小数（纯数字，不含小数点，前面拼接整数位 `3`）
+2. 替换 `piquery/pi_digits.txt`
 3. 重新编译使用该库的项目
 
 ## 许可证
 
-本项目采用MIT许可证，详情参见LICENSE文件。
+MIT，详见仓库根目录 [LICENSE](../LICENSE)。

@@ -1,91 +1,133 @@
 package piquery
 
 import (
+	"strings"
+	"sync"
 	"testing"
 )
 
-func TestNewPIStore(t *testing.T) {
-	store, err := NewPIStore()
-	if err != nil {
-		t.Fatalf("NewPIStore failed: %v", err)
-	}
-
-	if store.MaxPosition() <= 0 {
-		t.Error("Expected max position greater than 0")
+func TestMaxPosition(t *testing.T) {
+	if got := MaxPosition(); got < 1000000 {
+		t.Errorf("最大位置 = %d, 期望至少 1000000", got)
 	}
 }
 
-func TestQueryValidPosition(t *testing.T) {
-	store, err := NewPIStore()
+func TestQueryFirstPosition(t *testing.T) {
+	r, err := Query(1)
 	if err != nil {
-		t.Fatalf("NewPIStore failed: %v", err)
+		t.Fatalf("Query(1) 失败: %v", err)
 	}
-
-	// 测试已知的第1位
-	result, err := store.Query(1)
-	if err != nil {
-		t.Fatalf("Query failed: %v", err)
+	if r.Current != "3" {
+		t.Errorf("第 1 位 = %q, 期望 3（整数位）", r.Current)
 	}
-
-	if result.Position != 1 {
-		t.Errorf("Expected position 1, got %d", result.Position)
+	if r.Previous != "" {
+		t.Errorf("第 1 位的前 5 位应为空, 实际 %q", r.Previous)
 	}
-
-	if result.Current != "3" {
-		t.Errorf("Expected current digit '3', got %c", result.Current)
+	if len(r.Next) != 5 {
+		t.Errorf("第 1 位的后 5 位长度 = %d, 期望 5", len(r.Next))
 	}
+}
 
-	// 测试中间位置
-	if store.MaxPosition() > 100 {
-		result, err = store.Query(100)
+func TestQueryKnownDigits(t *testing.T) {
+	// π = 3.1415926535...
+	want := map[int]string{2: "1", 3: "4", 4: "1", 5: "5", 6: "9", 7: "2"}
+	for pos, digit := range want {
+		r, err := Query(pos)
 		if err != nil {
-			t.Errorf("Query for position 100 failed: %v", err)
+			t.Fatalf("Query(%d) 失败: %v", pos, err)
+		}
+		if r.Current != digit {
+			t.Errorf("第 %d 位 = %q, 期望 %q", pos, r.Current, digit)
 		}
 	}
 }
 
-func TestQueryInvalidPosition(t *testing.T) {
-	store, err := NewPIStore()
+func TestQueryContext(t *testing.T) {
+	// π = 3.1415926535 8979...，第 10 位是 index 9 的 "3"
+	r, err := Query(10)
 	if err != nil {
-		t.Fatalf("NewPIStore failed: %v", err)
+		t.Fatalf("Query(10) 失败: %v", err)
 	}
-
-	// 测试位置0
-	_, err = store.Query(0)
-	if err == nil {
-		t.Error("Expected error for position 0, got nil")
+	if r.Current != "3" {
+		t.Errorf("第 10 位 = %q, 期望 3", r.Current)
 	}
-
-	// 测试超出最大位置的查询
-	_, err = store.Query(store.MaxPosition() + 1)
-	if err == nil {
-		t.Error("Expected error for position beyond max, got nil")
+	if r.Previous != "59265" {
+		t.Errorf("第 10 位前 5 位 = %q, 期望 59265", r.Previous)
+	}
+	if r.Next != "58979" {
+		t.Errorf("第 10 位后 5 位 = %q, 期望 58979", r.Next)
 	}
 }
 
-func TestQueryEdgeCases(t *testing.T) {
-	store, err := NewPIStore()
+func TestQueryLastPosition(t *testing.T) {
+	max := MaxPosition()
+	r, err := Query(max)
 	if err != nil {
-		t.Fatalf("NewPIStore failed: %v", err)
+		t.Fatalf("Query(%d) 失败: %v", max, err)
 	}
+	if r.Next != "" {
+		t.Errorf("最后一位的后 5 位应为空, 实际 %q", r.Next)
+	}
+}
 
-	maxPos := store.MaxPosition()
+func TestQueryInvalidPosition(t *testing.T) {
+	for _, pos := range []int{0, -1, MaxPosition() + 1} {
+		if _, err := Query(pos); err == nil {
+			t.Errorf("Query(%d) 期望返回错误", pos)
+		}
+	}
+}
 
-	// 测试第一位（前5位不足）
-	result, err := store.Query(1)
+func TestNewPIStoreCheap(t *testing.T) {
+	s, err := NewPIStore()
 	if err != nil {
-		t.Errorf("Query for position 1 failed: %v", err)
+		t.Fatalf("NewPIStore 失败: %v", err)
 	}
-	if len(result.Previous) != 0 {
-		t.Errorf("Expected 0 previous digits for position 1, got %d", len(result.Previous))
+	if s.MaxPosition() != MaxPosition() {
+		t.Error("NewPIStore 与包级 MaxPosition 不一致")
 	}
+	// 校验只做一次：第二次调用不应再扫一遍数据（这里只验证可用性）
+	if _, err := NewPIStore(); err != nil {
+		t.Fatalf("第二次 NewPIStore 失败: %v", err)
+	}
+}
 
-	// 测试最后一位（后5位不足）
-	result, err = store.Query(maxPos)
-	if err != nil {
-		t.Errorf("Query for position %d failed: %v", maxPos, err)
+func TestConcurrentQuery(t *testing.T) {
+	var wg sync.WaitGroup
+	for i := 0; i < 32; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < 500; j++ {
+				r, err := Query((i*7+j)%1000 + 1)
+				if err != nil || len(r.Current) != 1 {
+					t.Errorf("并发查询异常: %+v %v", r, err)
+					return
+				}
+			}
+		}(i)
 	}
-	if len(result.Next) != 0 {
-		t.Errorf("Expected 0 next digits for last position, got %d", len(result.Next))
+	wg.Wait()
+}
+
+func TestInvalidPositionErrorMentionsRange(t *testing.T) {
+	_, err := Query(0)
+	if err == nil || !strings.Contains(err.Error(), "1") {
+		t.Errorf("错误信息应说明范围, 实际 %v", err)
+	}
+}
+
+func BenchmarkQuery(b *testing.B) {
+	if _, err := NewPIStore(); err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		_, _ = Query(i%1000 + 1)
+	}
+}
+
+func BenchmarkNewPIStore(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, _ = NewPIStore()
 	}
 }
