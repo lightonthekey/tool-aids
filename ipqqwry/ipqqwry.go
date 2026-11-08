@@ -71,48 +71,51 @@ var (
 )
 
 func init() {
-	// 1) 内嵌数据（默认）
-	if len(embeddedData) > 0 {
-		if d, err := parseDB(embeddedData, "embedded"); err != nil {
-			loadErr = err
-			log.Printf("ipqqwry: 内嵌 IP 库不可用: %v", err)
-		} else {
-			current.Store(d)
-		}
-	}
-
-	// 2) 环境变量指定的外部文件，优先级最高
-	if p := strings.TrimSpace(os.Getenv(envDataPath)); p != "" {
+	// 1) 外部文件优先：环境变量 → 可执行文件同级 data/ → 源码目录 data/
+	//    这样运维只要替换磁盘上的 qqwry.dat（再调 Reload）就能更新数据，无需重新编译。
+	if p, err := resolveExternal(); err == nil {
 		if d, err := loadFile(p); err != nil {
-			log.Printf("ipqqwry: 环境变量 %s=%s 不可用: %v（尝试其他数据源）", envDataPath, p, err)
+			// 外部文件损坏时不要直接失败，回退内嵌数据，但要留下明显日志
+			loadErr = err
+			log.Printf("ipqqwry: 外部 IP 库 %s 加载失败: %v（回退内嵌数据）", p, err)
 		} else {
 			current.Store(d)
 			loadErr = nil
 			return
 		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		// 环境变量写了但文件不存在之类的配置问题，需要让运维看见
+		log.Printf("ipqqwry: %v", err)
 	}
 
-	// 3) 还没加载到数据（用 -tags tool_aids_noembed 构建时），按目录查找
-	if current.Load() == nil {
-		p, err := resolveExternal()
+	// 2) 内嵌数据兜底（默认构建即有）
+	if len(embeddedData) > 0 {
+		d, err := parseDB(embeddedData, "embedded")
 		if err != nil {
 			loadErr = err
-			log.Printf("ipqqwry: %v", err)
-			return
-		}
-		d, err := loadFile(p)
-		if err != nil {
-			loadErr = err
-			log.Printf("ipqqwry: 加载 %s 失败: %v", p, err)
+			log.Printf("ipqqwry: 内嵌 IP 库不可用: %v", err)
 			return
 		}
 		current.Store(d)
 		loadErr = nil
+		return
 	}
+
+	// 3) 既没有外部文件也没有内嵌数据（-tags tool_aids_noembed 构建且文件缺失）
+	loadErr = fmt.Errorf("找不到 IP 库 %s，请通过 LoadFile 或环境变量 %s 指定", dbFileName, envDataPath)
+	log.Printf("ipqqwry: %v", loadErr)
 }
 
-// resolveExternal 在可执行文件同级、源码目录下查找 IP 库文件。
+// resolveExternal 按优先级查找外部 IP 库文件：
+// 环境变量 TOOL_AIDS_QQWRY_DAT → 可执行文件同级 data/ → 源码目录 data/。
+// 都没找到时返回 os.ErrNotExist，调用方据此回退内嵌数据。
 func resolveExternal() (string, error) {
+	if p := strings.TrimSpace(os.Getenv(envDataPath)); p != "" {
+		if fileExists(p) {
+			return p, nil
+		}
+		return "", fmt.Errorf("环境变量 %s 指定的文件不存在: %s", envDataPath, p)
+	}
 	if exe, err := os.Executable(); err == nil {
 		if p := filepath.Join(filepath.Dir(exe), "data", dbFileName); fileExists(p) {
 			return p, nil
@@ -123,7 +126,7 @@ func resolveExternal() (string, error) {
 			return p, nil
 		}
 	}
-	return "", fmt.Errorf("找不到 IP 库 %s，请通过 LoadFile 或环境变量 %s 指定", dbFileName, envDataPath)
+	return "", os.ErrNotExist
 }
 
 func fileExists(p string) bool {
@@ -170,21 +173,28 @@ func LoadFile(path string) error {
 	return nil
 }
 
-// Reload 按当前数据来源重新加载：外部文件则重新读盘，内嵌数据则重新解析内嵌副本。
+// Reload 重新加载 IP 库：先按优先级查找外部文件（替换 qqwry.dat 后热更新即可，
+// 无需重启进程），没有外部文件时重新解析内嵌数据。
 func Reload() error {
-	cur := current.Load()
-	if cur == nil {
-		return errors.New("IP 库尚未加载，请先调用 LoadFile")
+	if p, err := resolveExternal(); err == nil {
+		if err := LoadFile(p); err == nil {
+			return nil
+		}
 	}
-	if cur.source == "embedded" {
+	if len(embeddedData) > 0 {
 		d, err := parseDB(embeddedData, "embedded")
 		if err != nil {
 			return err
 		}
 		loadMu.Lock()
 		current.Store(d)
+		loadErr = nil
 		loadMu.Unlock()
 		return nil
+	}
+	cur := current.Load()
+	if cur == nil {
+		return errors.New("IP 库尚未加载，请先调用 LoadFile")
 	}
 	return LoadFile(cur.source)
 }
